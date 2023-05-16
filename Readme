@@ -1,5 +1,5 @@
-This library shows four Proverif codes. 
-The first codes can be run to validate whether the authentication protocol can be of the properity of authentication.
-The second codes can be run to validate whether the authentication protocol can be of the properity of forward security.
-The third codes can be run to validate whether the authentication protocol can be of the ability to resist ESL attack.
-The last codes can be run to validate whether the authentication protocol can be of the ability to resist KCI attack.
+This library shows four Proverif block of codes. 
+The first block of codes can be run to validate whether the authentication protocol can be of the properity of authentication.
+The second block of codes can be run to validate whether the authentication protocol can be of the properity of forward security.
+The third block of codes can be run to validate whether the authentication protocol can be of the ability to resist ESL attack.
+The last block of codes can be run to validate whether the authentication protocol can be of the ability to resist KCI attack.
