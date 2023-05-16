@@ -1,1 +1,162 @@
-# ProVerif_eCK
+free ch:channel.(*public channel*)
+free sch1:channel[private].(*issuer-user*)
+free sch2:channel[private].(*isuuer-server*)
+
+(*-issuer's secret key-*)
+free x:bitstring[private].
+free y:bitstring[private].
+
+(*-server provider's key pair*)
+type skey.
+type pkey.
+fun pk(skey):pkey.
+fun aenc(bitstring,pkey):bitstring.
+reduc forall m:bitstring,k:skey;adec(aenc(m,pk(k)),k)=m.
+free skS:skey[private].
+free pkS:pkey[private].
+
+(*-constants*)
+const n0: bitstring.(*parameters of mod*)
+const P: bitstring.(*parameters of dot multiplication*)
+free DIDu:bitstring[private].(*the user's identity*)
+free DIDi:bitstring[private].(*the issuer's identity*)
+free PWu:bitstring[private].(*the user's password*)
+free credCT:bitstring[private].(*the user's CT-based credential*)
+free VCi_u:bitstring[private].
+free VCi_s:bitstring[private].
+(*-session keys-*)
+free SKu:bitstring[private].(*the user's*)
+free SKs:bitstring[private].(*the server's*)
+
+(*-functions-*)
+fun h(bitstring):bitstring.(*hash function*)
+fun xor(bitstring,bitstring):bitstring.(*exclusive-or*)
+fun con(bitstring,bitstring):bitstring.(*string concatenation*)
+fun Mod(bitstring,bitstring): bitstring.(*mod*)
+fun mul(bitstring,bitstring): bitstring.(*dot multiplication*)
+fun tb(pkey):bitstring.
+(*-exclusive-or equation-*)
+equation forall m:bitstring,n:bitstring; xor(xor(m,n),n)=m.
+equation forall m:bitstring,n:bitstring; mul(mul(P,m),n)=mul(mul(P,n),m).
+reduc forall m:bitstring,n:bitstring; getl(con(m,n))=m.
+reduc forall m:bitstring,n:bitstring; getr(con(m,n))=n.
+
+(*-queries-*)
+query attacker(SKu).
+query attacker(SKs).
+
+
+let User=
+	new r:bitstring; 
+	let HPWu0 = Mod(n0,h(con(con(DIDu,PWu),credCT))) in
+	let u0 = xor(HPWu0,r) in
+	out(sch1,u0);
+
+	in(sch1,(uPIDu:bitstring,uVCiu:bitstring,uu1:bitstring));
+	let PITi_uVCi_u = xor(uu1,u0) in
+	let uPITi_u = getl(PITi_uVCi_u) in
+	let uVCi_u = getr(PITi_uVCi_u) in
+	let uu1 = xor(con(uPITi_u,uVCi_u),HPWu0) in
+	let u2 = Mod(n0,h(con(con(con(uPITi_u,DIDu),PWu),uVCi_u))) in
+	!
+	(
+	let HPWu = Mod(n0,h(con(con(DIDu,PWu),credCT))) in
+	let PITi_uVCi_u = xor(uu1,HPWu) in
+	let uPITi_u = getl(PITi_uVCi_u) in
+	let uVCi_u = getr(PITi_uVCi_u) in
+	if u2 = Mod(n0,h(con(con(con(uPITi_u,DIDu),PWu),uVCi_u))) then
+	new ru:bitstring;
+	new Tu:bitstring;
+	let u3 = mul(P,ru) in
+	let C1 = aenc(con(con(h(con(uVCi_u,ru)),uVCiu),u3),pkS) in
+	let C2 = h(con(con(con(con(h(con(uVCi_u,ru)),uVCiu),tb(pkS)),u3),Tu)) in
+	let M1 = (uPIDu,C1,C2,Tu) in
+	out(ch,M1);
+
+	in(ch,(uC9:bitstring,uC10:bitstring,uC11:bitstring));
+	let uu4xorPIDunewPITiu = xor(uC9,h(con(u3,uVCiu))) in
+	let uu4 = getl(uu4xorPIDunewPITiu) in
+	let xorPIDunewPITiu = getr(uu4xorPIDunewPITiu) in
+	let uPIDunew = xor(xorPIDunewPITiu,uPITi_u) in
+	let uPITi_unew = xor(uC10,uPIDunew) in
+	let uAck = h(con(uPIDunew,uPITi_unew)) in
+	let SKu = h(mul(con(h(con(uVCi_u,ru)),ru),uu4)) in
+	if uC11 = h(con(SKu,uAck)) then
+	let uu1 = xor(con(uPITi_unew,uVCi_u),HPWu) in
+	0
+	).
+
+let Server =
+	in(sch2,sVCi_s:bitstring);
+	!
+	(
+	in(ch,(sPIDu:bitstring,sC1:bitstring,sC2:bitstring,sTu:bitstring));
+	let hVCiurusVCiusu3 = adec(sC1,skS) in
+	let hVCiurusVCiu = getl(hVCiurusVCiusu3) in
+	let su3 = getr(hVCiurusVCiusu3) in
+	let hVCiuru = getl(hVCiurusVCiu) in
+	let sVCiu = getr(hVCiurusVCiu) in
+	if sC2 = h(con(con(con(con(hVCiuru,sVCiu),tb(pkS)),su3),sTu)) then
+	new Ts:bitstring;
+	let C3 = xor(sVCiu,h(con(sVCi_s,tb(pkS)))) in
+	let C4 = h(con(con(sVCiu,sVCi_s),Ts)) in
+	let M2 = (sPIDu,C3,C4,Ts) in
+	out(ch,M2);
+
+	in(ch,(sC5:bitstring,sC6:bitstring,sC7:bitstring,sC8:bitstring,sTi:bitstring));
+	let hVCiuVCi = xor(sC5,h(con(sVCi_s,tb(pkS)))) in
+	if sC6 = h(con(con(hVCiuVCi,sVCi_s),sTi)) then
+	let xorPITiuPIDunewsAck = xor(sC7,hVCiuVCi) in
+	let xorPITiuPIDunew = getl(xorPITiuPIDunewsAck) in
+	let sAck = getr(xorPITiuPIDunewsAck) in
+	let xorPITiuPITiunew = xor(sC8,h(con(sVCi_s,sVCiu))) in
+	new rs:bitstring;
+	let u4 = mul(rs,P) in
+	let SKs = h(mul(con(hVCiuru,rs),su3)) in
+	let C9 = xor(con(u4,xorPITiuPIDunew),h(con(su3,sVCiu))) in
+	let C10 = xor(xorPITiuPIDunew,xorPITiuPITiunew) in
+	let C11 = h(con(SKs,sAck)) in
+	let M4 = (C9,C10,C11) in
+	out(ch,M4);
+	0
+	).
+
+
+let IssuerReg1 =
+	in(sch1,iu0:bitstring);
+	new iPIDu:bitstring;
+	let PITi_u = h(con(con(iPIDu,DIDi),x)) in
+	let VCi_u = h(con(con(iu0,x),DIDi)) in
+	let u1 = xor(con(PITi_u,VCi_u),iu0) in
+	let VCi = Mod(n0,h(con(con(VCi_u,iu0),x))) in
+	let VCiu = xor(VCi,h(con(iPIDu,x))) in
+	let VCCi = (iPIDu,VCiu,u1) in
+	out(sch1,VCCi).
+let IssuerReg2 =
+	in(ch,pkS:pkey);
+	let VCi_s = h(con(tb(pkS),y)) in
+	out(sch2,VCi_s).
+let IssuerAuth =
+	in(ch,(iPIDu:bitstring,iC3:bitstring,iC4:bitstring,iTs:bitstring));
+	let iVCiu = xor(iC3,h(con(h(con(tb(pkS),y)),tb(pkS)))) in
+	if iC4 = h(con(con(iVCiu,h(con(tb(pkS),y))),iTs)) then
+	let iVCi = xor(iVCiu,h(con(iPIDu,x))) in
+	new Ti:bitstring;
+	new PIDunew:bitstring;
+	let PITi_u = h(con(con(iPIDu,DIDi),x)) in
+	let PITi_unew = h(con(con(PIDunew,DIDi),x)) in
+	let Ack = h(con(PIDunew,PITi_unew)) in
+	let C5 = xor(h(con(iVCiu,iVCi)),h(con(h(con(tb(pkS),y)),tb(pkS)))) in
+	let C6 = h(con(con(h(con(h(iVCiu),iVCi)),h(con(tb(pkS),y))),Ti)) in
+	let C7 = xor(con(xor(PITi_u,PIDunew),Ack),h(con(iVCiu,iVCi))) in
+	let C8 = xor(xor(PITi_u,PIDunew),h(con((h(con(tb(pkS),y))),iVCiu))) in
+	let M3 = (C5,C6,C7,C8,Ti) in
+	out(ch,M3).
+let Issuer = IssuerReg1|IssuerReg2|IssuerAuth.
+
+
+process
+	let pkS = pk(skS) in
+	out(ch,pkS);
+	(* Verify KCI Attack *)
+	( (!User) | (!Issuer) |(!Server)|(out(ch,skS)))
