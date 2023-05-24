@@ -1,4 +1,4 @@
-This library shows four Proverif block of codes. 
+These three modules show four Proverif block of codes which correspond to the authentication protocol of DID2IE system, scenarios of IIoT and Telemedicine, respectively. 
 The first block of codes can be run to validate whether the authentication protocol can be of the properity of authentication.
 The second block of codes can be run to validate whether the authentication protocol can be of the properity of forward security.
 The third block of codes can be run to validate whether the authentication protocol can be of the ability to resist ESL attack.
