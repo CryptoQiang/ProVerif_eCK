@@ -121,7 +121,7 @@ let Sensor =
 	new rs:bitstring; 
 	new T3:bitstring;
 	let A4 = mul(P,rs) in
-    let A5 = mul(sA3,rs) in 	
+        let A5 = mul(sA3,rs) in 	
 	let SKs = h(con(con(A5,h(sB1)),srg)) in 
 	let sD7 = xor(SIDj,h(srg)) in
 	let sD8 = xor(con(A4,h(con(SKs,srg))),sxj) in
