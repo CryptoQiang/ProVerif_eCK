@@ -1,0 +1,140 @@
+free ch:channel.(*public channel*)
+free sch1:channel[private].(*for user registration*)
+free sch2:channel[private].(*for sensor registration*)
+(*-session keys-*)
+free SKu:bitstring[private].(*the user's*)
+free SKs:bitstring[private].(*the sensor's*)
+(*-GWN's secret key-*)
+free x:bitstring[private].
+free y:bitstring[private].
+(*-constants*)
+const n0: bitstring.(*parameters of mod*)
+const P: bitstring.(*parameters of dot multiplication*)
+free IDi:bitstring[private].(*the user's identity*)
+free PWi:bitstring[private].(*the user's password*)
+free LTKii:bitstring[private].(*the user's final biometric secret string*)
+free Su:bitstring[private].(*△Su *)
+free Fit:bitstring[private].(*Fi(t) *)
+free SIDj:bitstring[private].(*the sensor's identity*)
+free sLTKj:bitstring[private].(*the sensor's secret value*)
+(*-functions-*)
+fun h(bitstring):bitstring.(*hash function*)
+fun xor(bitstring,bitstring):bitstring.(*exclusive-or*)
+fun con(bitstring,bitstring):bitstring.(*string concatenation*)
+fun Mod(bitstring,bitstring): bitstring.(*mod*)
+fun mul(bitstring,bitstring): bitstring.(*dot multiplication*)
+(*-exclusive-or equation-*)
+equation forall m:bitstring,n:bitstring; 
+xor(xor(m,n),n)=m.
+equation forall m:bitstring,n:bitstring; 
+mul(mul(P,m),n)=mul(mul(P,n),m).
+event UserStart(bitstring).
+event UserAuth(bitstring).
+(*-queries-*)
+query attacker(SKu).
+query attacker(SKs).
+ 
+let User=
+	new r:bitstring; 
+	let HPWi0=Mod(n0,h((con(IDi,PWi)))) in
+	let A0=xor(HPWi0,r) in
+	out(sch1,(A0));
+	in(sch1,(A1:bitstring,uPIDi:bitstring,uSu:bitstring,uFit:bitstring));
+	let LTKi = xor(A0,A1) in
+	let A2 = Mod(n0,h(con(con(con(con(IDi,PWi),LTKii),LTKi),uSu))) in
+	let A1 = con(LTKi,xor(LTKi,HPWi0)) in
+	!
+	(
+	event UserStart(uPIDi);
+	let HPWi=Mod(n0,h((con(IDi,PWi)))) in
+	let (uLTKi:bitstring,uSunew:bitstring)= xor(A1,HPWi) in
+	if A2 = Mod(n0,h(con(con(con(con(IDi,PWi),uLTKi),LTKii),uSunew))) then
+	new ru:bitstring;
+	new ru2:bitstring;
+	new T1:bitstring;
+	let A3 = mul(P,ru) in 
+	new SNj:bitstring;
+	let C1 = xor(con(h(con(ru,T1)),A3),h(con(LTKi,T1))) in
+	let C2 = xor(uSu,h(con(uPIDi,h(con(ru2,T1))))) in
+	let C3 = h(con(con(con(con(uPIDi,SIDj),A3),uSu),T1)) in
+	let M1 = (uPIDi,uFit,SIDj,C1,C2,C3,T1) in
+	out(ch,M1);
+	in (ch,(uFitnew:bitstring,uC11:bitstring,uC12:bitstring,uC13:bitstring));
+	let uLTKinew = xor(uC11,LTKi) in
+	let (uPIDinew:bitstring,uA4:bitstring,uSunew:bitstring) = xor(uC12,h(con(uLTKinew,A3))) in
+	let uA5 = mul(uA4,ru) in
+	let SKu = h(con(con(con(uA5,uPIDi),SIDj),h(LTKi))) in
+	if uC13 = h(con(con(con(uPIDinew,uSunew),h(con(uA4,SKu))),uFitnew)) then
+	let A1new = xor(uLTKinew,HPWi) in
+	let A2new = Mod(n0,h(con(con(con(con(IDi,PWi),uLTKinew),LTKii),uSunew))) in
+	let A1 = A1new in
+	let A2 = A2new in
+	let uPIDi = uPIDinew in
+	0
+	).
+let GWNReg1 =
+	in(sch1,(gA0:bitstring));
+	new gPIDi:bitstring;
+	let gLTKi = h(con(gPIDi,x)) in
+	let gA1 = xor(gLTKi,gA0) in
+	out(sch1,(gA1,gPIDi,Su,Fit)).
+let GWNReg2 =
+	in(sch2,gsidj:bitstring);
+	let gLTKj = h(con(gsidj,x)) in
+	out(sch2,gLTKj).
+let GWNAuth =
+	in (ch,(gPIDi:bitstring,gFit:bitstring,gSIDj:bitstring,gC1:bitstring,gC2:bitstring,gC3:bitstring,gT1:bitstring));
+	if gFit=Fit then
+	let gLTKi = h(con(gPIDi,x)) in
+	let (hru2T1:bitstring,gA3:bitstring) = xor(gC1,h(con(gLTKi,gT1))) in
+	let gSu = xor(gC2,h(con(gPIDi,hru2T1))) in
+	if gC3=h(con(con(con(con(gPIDi,gSIDj),gA3),gSu),gT1)) then
+	event UserAuth(gPIDi);
+	new rg:bitstring;
+	new T2:bitstring;
+	let gLTKj = h(con(gSIDj,x)) in
+	let gC4 = xor(con(gA3,rg),h(con(gLTKj,gSIDj))) in
+	let gC5 = xor(con(gSIDj,h(gLTKi)),h(con(gLTKj,rg))) in
+	let gC6 = h(con(con(con(con(gA3,rg),gLTKj),gSIDj),T2)) in
+	let M2= (gPIDi,gC4,gC5,gC6,T2) in
+	out(ch,M2);
+	in (ch,(gC7:bitstring,gC8:bitstring,gC9:bitstring,gC10:bitstring,gT3:bitstring));
+	let SIDjnew = xor(gC7,h(rg)) in
+	let gLTKjnew = h(con(SIDjnew,x)) in
+	let (gA4:bitstring,hSKrg:bitstring) = xor(gC8,gLTKi) in
+	if gC9 = h(con(con(con(gA4,hSKrg),gLTKjnew),gT3)) then
+	let hA4SK = xor(xor(gC10,hSKrg),gLTKi) in
+	new PIDinew:bitstring;
+	let gLTKinew = h(con(PIDinew,x)) in
+	new Sunew:bitstring;
+	new newFit:bitstring;
+	let C11 = xor(gLTKinew,gLTKi) in
+	let C12 = xor(con(con(PIDinew,gA4),Sunew),h(con(gLTKinew,gA3))) in
+	let C13 = h(con(con(con(PIDinew,Sunew),hA4SK),newFit)) in
+	let M4 = (newFit,C11,C12,C13) in
+	out(ch,M4).
+let GWN = GWNReg1|GWNReg2|GWNAuth.
+let Sensor =
+	in(sch2,sLTKj:bitstring);
+	!
+	(
+	in(ch,(sPIDi:bitstring,sC4:bitstring,sC5:bitstring,sC6:bitstring,sT2:bitstring));
+	let (sA3:bitstring,srg:bitstring) = xor(sC4,h(con(sLTKj,SIDj))) in
+	let (sSIDj:bitstring,shLTKi:bitstring) = xor(sC5,h(con(sLTKj,srg))) in
+	if sC6 = h(con(con(con(con(sA3,srg),sLTKj),sSIDj),sT2)) then
+	new rs:bitstring; 
+	new T3:bitstring;
+	let A4 = mul(P,rs) in
+    let A5 = mul(sA3,rs) in 	
+	let SKs = h(con(con(con(A5,sPIDi),SIDj),shLTKi)) in
+	let sC7 = xor(SIDj,h(srg)) in
+	let sC8 = xor(con(A4,h(con(SKs,srg))),sLTKj) in
+	let sC9 = h(con(con(con(A4,h(con(SKs,srg))),sLTKj),T3)) in
+	let sC10 =xor(xor(h(con(SKs,srg)),sLTKj),h(con(A4,SKs))) in
+	let M3 = (sC7,sC8,sC9,sC10,T3) in
+	out(ch,M3); 
+	0
+	).
+process 
+	 ( (!User) | (!GWN) |(!Sensor)|(out(ch,(sLTKj))))
+
